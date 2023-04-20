@@ -1,0 +1,252 @@
+---
+title: "stufftouse"
+output: html_document
+---
+
+    # Change map zoom on table click & update selected heatmap_param to selected row param
+```{r}
+# Add your library below.
+library(htmltools)
+library(shiny)
+library(ggplot2)
+library(ggmap)
+library(rsconnect)
+library(leaflet)
+library(dplyr)
+library(shinycssloaders)
+library(rgdal)
+library(plotly)
+
+library(DT)
+library(shinyjs)
+library(sf)
+library(terra)
+```
+```{r}
+layers <- "C:/Users/jfroberts.f19/Downloads/2000 Buncombe Census Boundary-20230223T182242Z-001/2000 Buncombe Census Boundary/BCBoundary 2020.gpkg"
+
+## you may have more than one layer
+BCB2020 <- st_read(layers)
+```
+```{r}
+
+r_colors <- rgb(t(col2rgb(colors()) / 255))
+names(r_colors) <- colors()
+
+ui <- fluidPage(
+  leafletOutput("mymap"),
+  p(),
+  actionButton("recalc", "New points")
+)
+
+server <- function(input, output, session) {
+
+  points <- eventReactive(input$recalc, {
+    cbind(rnorm(40) * 2 + 13, rnorm(40) + 48)
+  }, ignoreNULL = FALSE)
+
+  output$mymap <- renderLeaflet({
+    leaflet() %>%
+      addProviderTiles(providers$Stamen.TonerLite,
+        options = providerTileOptions(noWrap = TRUE)
+      ) %>%
+      addMarkers(data = points())
+  })
+}
+
+shinyApp(ui, server)
+```
+
+
+```{r}
+outline <- BCB2020[chull(35.5388506,-82.7058337),]
+
+map <- leaflet(BCB2020) %>%
+  # Base groups
+  addTiles(group = "OSM (default)") %>%
+  addProviderTiles(providers$Stamen.Toner, group = "Toner") %>%
+  addProviderTiles(providers$Stamen.TonerLite, group = "Toner Lite") %>%
+  # Overlay groups
+  addCircles(~-82.7058337, ~35.5388506, ~10^mag/5, stroke = F, group = "Quakes") %>%
+  addPolygons(data = outline, lng = ~long, lat = ~lat,
+    fill = F, weight = 2, color = "#FFFFCC", group = "Outline") %>%
+  # Layers control
+  addLayersControl(
+    baseGroups = c("OSM (default)", "Toner", "Toner Lite"),
+    overlayGroups = c("Quakes", "Outline"),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+map
+```
+
+
+```{r}
+library(shiny)
+library(leaflet)
+library(spData)
+library(dplyr)
+
+# Define UI for application that filters map points based on year and minimum population
+ui <- fluidPage(
+   
+   # Application title
+   titlePanel("Buncombe County Census Tract"),
+   
+   # Sidebar with a slider input for year, numeric input for population 
+   sidebarLayout(
+      sidebarPanel(
+
+         sliderInput("year",
+                     "Year",
+                     min = 1950,
+                     max = 2030,
+                     step = 5,
+                     sep = "",
+                     value = 1950),
+         
+         numericInput("pop_min",
+                      "Minimum Population (in millions)",
+                      min = 1,
+                      max = 20,
+                      value = 10)
+      ),
+      
+      # Show the map and table
+      mainPanel(
+         # plotOutput("distPlot"),
+         leafletOutput("map"),
+         dataTableOutput("table")
+      )
+   )
+)
+
+# Define server logic required to draw a map and table
+server <- function(input, output) {
+
+   
+   output$map <- renderLeaflet({
+     
+     pop_by_year <- filter(urban_agglomerations, 
+                           year == input$year,
+                           population_millions > input$pop_min)
+     
+     leaflet(data = pop_by_year) %>%
+       addTiles() %>%
+       addMarkers()
+   })
+   
+   output$table <- renderDataTable({
+     
+     pop_by_year <- filter(urban_agglomerations, 
+                           year == input$year,
+                           population_millions > input$pop_min)
+     
+     pop_by_year
+     
+   })
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+
+
+
+
+
+```{r}
+ui<-fluidPage(
+    tags$head(HTML("<title>FAF Comparison </title>")),
+    useShinyjs(),
+    br(),
+    span(style = "font-weight: 600; font-size: 25px; width: 100%;
+         color: #022DB7;", "Freight Analysis Framework FAF4 vs. FAF5, Year 2017"),
+    br(),br(),
+    fluidRow(
+      column(8, leafletOutput("Zone", height = "550px")%>% withSpinner(color="#0dc5c1")),
+      column(4, 
+             span("Select "), span( style="color:green", "Origin"), span(" and "), 
+             span( style="color:red", "Destination"), 
+             span(" from the map:"),
+             br(),br(),
+             htmlOutput("od_info")%>% withSpinner(color="#0dc5c1"),
+             hr(),
+             htmlOutput("od_total")%>% withSpinner(color="#0dc5c1"),
+             hr(),
+             htmlOutput("od_total_5")%>% withSpinner(color="#0dc5c1")    
+      )
+    ),
+    br(),br(),
+    fluidRow(
+      column(9, div(DT::dataTableOutput("od_vol"),  width = "100%", style = "font-size:100%"))
+    ),
+    fluidRow(
+      column(5, plotlyOutput("od_ton_chart", width = "100%", height = "350px")%>% 
+             withSpinner(color="#0dc5c1")),
+      column(3, plotlyOutput("od_ton_pie", width = "100%", height = "250px")%>% 
+             withSpinner(color="#0dc5c1")),
+      column(3, plotlyOutput("od_ton_pie_5", width = "100%", height = "250px")%>% 
+             withSpinner(color="#0dc5c1"))
+    ),
+    hr(),
+    fluidRow(
+      column(5, plotlyOutput("od_value_chart", width = "100%", height = "350px")%>% 
+             withSpinner(color="#0dc5c1")),
+      column(3, plotlyOutput("od_value_pie", width = "100%", height = "250px")%>% 
+             withSpinner(color="#0dc5c1")),
+      column(3, plotlyOutput("od_value_pie_5", width = "100%", height = "250px")%>% 
+             withSpinner(color="#0dc5c1"))
+    )      
+  )
+```
+
+```{r}
+
+```
+
+
+```{r}
+zone.rg <- readOGR(dsn="Buncombecensus2020",layer="faf4_zone2", encoding = "UTF-8")
+centroid <- read.csv(file = 'centroid.csv')
+od_mode_vol <- read.csv(file = 'od_mode_vol_45.csv')
+```
+
+
+```{r}
+ map_proxy=leaflet::leafletProxy("map")
+    observeEvent(input$table_input_rows_selected,{
+        lat=prof_sites[prof_sites$MonitoringLocationIdentifier==reactive_objects$sel_mlid,"LatitudeMeasure"]
+        long=prof_sites[prof_sites$MonitoringLocationIdentifier==reactive_objects$sel_mlid,"LongitudeMeasure"]
+        map_proxy %>% leaflet::setView(lng=long, lat=lat, zoom=12)
+        updateSelectInput(session, "heatmap_param",selected=reactive_objects$sel_param)
+    })
+```
+
+```{r}
+ # Select map set up
+    map = leaflet::createLeafletMap(session, 'map')
+    
+    session$onFlushed(once = T, function() {
+        output$map <- leaflet::renderLeaflet({
+            buildMap(sites=prof_sites, plot_polys=TRUE, au_poly=lake_aus)
+        })
+    })
+    
+```
+
+```{r}
+   # Map marker click (to identify selected site)
+    observe({
+        req(profiles_long)
+        site_click <- input$map_marker_click
+        if (is.null(site_click)){return()}
+        siteid=site_click$id
+        reactive_objects$sel_mlid=siteid
+    })
+```
+
+```{r}
+
+```
+
