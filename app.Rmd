@@ -13,7 +13,7 @@ install.packages('leaflet', configure.args = '--with-proj-include=/opt/homebrew/
 # Set Working Directory To The Directory Of This File
 
 ```{r}
-cur_dir <- rstudioapi::getActiveDocumentContext()$path
+cur_dir <- dirname(rstudioapi::getActiveDocumentContext()$path)
 setwd(cur_dir)
 ```
 
