@@ -3,7 +3,7 @@ title: "stufftouse"
 output: html_document
 ---
 
-    # Change map zoom on table click & update selected heatmap_param to selected row param
+# Change map zoom on table click & update selected heatmap_param to selected row param
 ```{r}
 # Add your library below.
 library(htmltools)

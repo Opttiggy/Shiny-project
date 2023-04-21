@@ -1,0 +1,42 @@
+# Install / Load packages
+
+Only run this cell if you're on a Mac with M1 Processor
+
+```{r}
+install.packages('sf', configure.args = '--with-proj-include=/opt/homebrew/include/ --with-proj-lib=/opt/homebrew/lib/', configure.vars = 'GDAL_DATA=/opt/homebrew/opt/gdal/share/gdal/')
+
+install.packages('terra', configure.args = '--with-proj-include=/opt/homebrew/include/ --with-proj-lib=/opt/homebrew/lib/', configure.vars = 'GDAL_DATA=/opt/homebrew/opt/gdal/share/gdal/')
+
+install.packages('leaflet', configure.args = '--with-proj-include=/opt/homebrew/include/ --with-proj-lib=/opt/homebrew/lib/', configure.vars = 'GDAL_DATA=/opt/homebrew/opt/gdal/share/gdal/')
+```
+
+# Read Shape file
+
+```{r}
+library(sf)
+library(leaflet)
+
+layers <- "BCBoundary 2020.gpkg"
+
+## you may have more than one layer
+BCB2020 <- st_read(layers)
+
+#heat_fun <- colorQuantile("Blues", BCB2020$AWATER, n=5)
+heat_fun <- colorNumeric(palette="Blues", domain=BCB2020$AWATER)
+
+popup <- paste0("<strong>Water: </strong>", BCB2020$AWATER)
+
+leaflet(BCB2020) %>%
+  addPolygons(
+    fillColor=~heat_fun(AWATER),
+    smoothFactor = 0.2,
+    popup = popup
+  ) %>%
+  addTiles() %>%
+  addLegend(
+    "bottomright",
+    pal=heat_fun,
+    values=~AWATER,
+    title="Water"
+  )
+```
