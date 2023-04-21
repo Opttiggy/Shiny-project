@@ -10,6 +10,14 @@ install.packages('terra', configure.args = '--with-proj-include=/opt/homebrew/in
 install.packages('leaflet', configure.args = '--with-proj-include=/opt/homebrew/include/ --with-proj-lib=/opt/homebrew/lib/', configure.vars = 'GDAL_DATA=/opt/homebrew/opt/gdal/share/gdal/')
 ```
 
+# Set Working Directory To The Directory Of This File
+
+```{r}
+cur_dir <- rstudioapi::getActiveDocumentContext()$path
+setwd(cur_dir)
+```
+
+
 # Read Shape file
 
 ```{r}
